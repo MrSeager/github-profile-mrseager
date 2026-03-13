@@ -5,11 +5,7 @@ import Image from "next/image";
 //Icons
 import { FiSearch } from "react-icons/fi";
 //Types
-import { GitHubUser } from "@/types/types";
-
-interface HeaderPanelProps {
-    onSelectUser: (username: string) => void;
-}
+import { GitHubUser, HeaderPanelProps } from "@/types/types";
 
 export default function HeaderPanel({ onSelectUser }: HeaderPanelProps ) {
     const [value, setValue] = useState<string>("");
@@ -26,15 +22,23 @@ export default function HeaderPanel({ onSelectUser }: HeaderPanelProps ) {
 
         const fetchUsers = async () => {
             try {
-            const res = await fetch(
+                const res = await fetch(
                 `https://api.github.com/search/users?q=${value}`,
                 { signal: controller.signal }
-            );
-            const data = await res.json();
-            setResults(data.items || []);
-            } catch (err) {
-            // ignore abort errors
-            }
+                );
+                const data = await res.json();
+
+                // Fetch full profiles for each result
+                const fullProfiles = await Promise.all(
+                (data.items || []).slice(0, 5).map(async (u: GitHubUser) => {
+                    const profileRes = await fetch(`https://api.github.com/users/${u.login}`);
+                    const profile = await profileRes.json();
+                    return profile;
+                })
+                );
+
+                setResults(fullProfiles);
+            } catch {}
         };
 
         fetchUsers();
@@ -49,7 +53,7 @@ export default function HeaderPanel({ onSelectUser }: HeaderPanelProps ) {
     };
 
     return (
-        <header className="p-4 w-full max-w-[120rem]">
+        <header className="py-5 w-full h-[300px] max-w-[120rem] bg-[url(/images/hero-image-github-profile.jpg)] bg-no-repeat bg-top bg-cover">
             <form 
                 onSubmit={(e) => {
                     e.preventDefault();
@@ -57,38 +61,41 @@ export default function HeaderPanel({ onSelectUser }: HeaderPanelProps ) {
                 }} 
                 className="relative flex w-[50%] mx-auto rounded rounded-[10px] bg-[#20293A]"
             >
-                <label className="flex justify-center items-center px-3">
-                    <FiSearch />
+                <label className="flex justify-center items-center px-4">
+                    <FiSearch size={20} />
                 </label>
                 <input
                     type="text"
-                    placeholder="Search GitHub username..."
+                    placeholder="username"
                     value={value}
                     onChange={(e) => {
                         setValue(e.target.value);
                         setShowPanel(true);
                     }}
-                    className="px-3 py-2 w-full "
+                    className="px-3 py-4 w-full focus:outline-0 placeholder:text-white"
                 />
             </form>
 
             {showPanel && results.length > 0 && (
-            <div className="absolute w-[50%] mx-auto left-0 right-0 mt-2 bg-[#20293A] rounded-lg shadow-lg overflow-hidden z-20">
+            <div className="absolute w-[50%] mx-auto left-0 right-0 mt-2 bg-[#111729] rounded-[15px] shadow-lg overflow-hidden z-20">
                 {results.slice(0, 5).map((user) => (
                     <button
                         type="button"
                         key={user.id}
                         onClick={() => handleSelect(user.login)}
-                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#2A3550] text-left"
+                        className="flex items-center gap-3 w-full px-2 py-2 duration-300 hover:bg-[#2A3550] text-left"
                     >
                         <Image
                             src={user.avatar_url}
                             alt={user.login}
-                            className="rounded-full"
-                            width={100}
-                            height={100}
+                            className="rounded-[15px]"
+                            width={90}
+                            height={90}
                         />
-                        <span>{user.login}</span>
+                        <div className="flex flex-col gap-2">
+                            <h1 className="text-[20px]">{user.login}</h1>
+                            <p className="text-white/75 text-[15px]">{user.bio}</p>
+                        </div>
                     </button>
                     ))}
                 </div>

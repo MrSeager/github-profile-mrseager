@@ -4,6 +4,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import HeaderPanel from "@/components/HeaderPanel";
+import MainPanel from "@/components/MainPanel";
 //Types
 import { GitHubUserFull } from "@/types/types";
 
@@ -31,25 +32,13 @@ export default function Home() {
   };
 
   return (
-    <div className="text-white bg-black min-h-screen flex flex-col items-center">
+    <div className="text-white bg-[#20293A] min-h-screen flex flex-col items-center">
       <HeaderPanel onSelectUser={searchUser} />
 
-      <main className="p-8 flex flex-col items-center">
-        {error && <p className="text-red-500">{error}</p>}
-
-        {user && (
-          <div className="text-center">
-            <Image
-              src={user.avatar_url}
-              alt={user.name + ' profile imager'}
-              className="rounded-full shadow"
-              width={200}
-              height={200}
-            />
-            <h1 className="text-3xl font-bold mt-4">{user.name || user.login}</h1>
-          </div>
-        )}
-      </main>
+      <MainPanel 
+        error={error}
+        user={user}
+      />
     </div>
   );
 }
