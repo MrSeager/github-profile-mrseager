@@ -5,45 +5,41 @@ import Image from "next/image";
 //Icons
 import { FiSearch } from "react-icons/fi";
 //Types
-import { GitHubUser, HeaderPanelProps } from "@/types/types";
+import { GitHubUser, HeaderPanelProps, GitHubUserFull } from "@/types/types";
+
+const profileCache = new Map<string, GitHubUserFull>();
 
 export default function HeaderPanel({ onSelectUser }: HeaderPanelProps ) {
-    const [value, setValue] = useState<string>("");
+    const [value, setValue] = useState("");
     const [results, setResults] = useState<GitHubUser[]>([]);
     const [showPanel, setShowPanel] = useState<boolean>(false);
 
+    const fetchUsers = async () => {
+        try {
+            const res = await fetch(`https://api.github.com/search/users?q=${value}`);
+            const data = await res.json();
+
+            if (!data.items) {
+            setResults([]);
+            return;
+            }
+
+            setResults(data.items.slice(0, 5)); // ONLY SEARCH RESULTS
+        } catch {
+            setResults([]);
+        }
+    };
+
     useEffect(() => {
+        const timeout = setTimeout(() => {
         if (value.length < 2) {
-            queueMicrotask(() => setResults([]));
+            setResults([]);
             return;
         }
-
-        const controller = new AbortController();
-
-        const fetchUsers = async () => {
-            try {
-                const res = await fetch(
-                `https://api.github.com/search/users?q=${value}`,
-                { signal: controller.signal }
-                );
-                const data = await res.json();
-
-                // Fetch full profiles for each result
-                const fullProfiles = await Promise.all(
-                (data.items || []).slice(0, 5).map(async (u: GitHubUser) => {
-                    const profileRes = await fetch(`https://api.github.com/users/${u.login}`);
-                    const profile = await profileRes.json();
-                    return profile;
-                })
-                );
-
-                setResults(fullProfiles);
-            } catch {}
-        };
-
         fetchUsers();
+        }, 300);
 
-        return () => controller.abort();
+        return () => clearTimeout(timeout);
     }, [value]);
 
     const handleSelect = (username: string) => {
@@ -86,16 +82,13 @@ export default function HeaderPanel({ onSelectUser }: HeaderPanelProps ) {
                         className="flex items-center gap-3 w-full px-2 py-2 duration-300 hover:bg-[#2A3550] text-left"
                     >
                         <Image
-                            src={user.avatar_url}
-                            alt={user.login}
-                            className="rounded-[15px]"
+                            src={user.avatar_url || "/images/default-avatar.png"}
+                            alt={`${user.login} profile img`}
                             width={90}
                             height={90}
+                            className="rounded-[15px]"
                         />
-                        <div className="flex flex-col gap-2">
-                            <h1 className="text-[20px]">{user.login}</h1>
-                            <p className="text-white/75 text-[15px]">{user.bio}</p>
-                        </div>
+                        <h1 className="text-[20px]">{user.login}</h1>
                     </button>
                     ))}
                 </div>
